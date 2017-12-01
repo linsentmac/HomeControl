@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context="com.lenovo.devicecontrol.activity.LanguageActivity">
+
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/select_language"
+        android:textColor="@android:color/black"
+        android:layout_marginLeft="40dp"
+        android:layout_marginTop="20dp"
+        android:textSize="22sp"/>
+
+    <TextView
+        android:id="@+id/ensure_language_Tv"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentRight="true"
+        android:text="@string/ensure_language"
+        android:textColor="@android:color/black"
+        android:textSize="22sp"
+        android:layout_marginTop="20dp"
+        android:layout_marginRight="40dp"
+        />
+
+    <TextView
+        android:layout_width="400dp"
+        android:layout_height="1dp"
+        android:background="@color/grep_background"
+        android:layout_centerHorizontal="true"
+        android:layout_above="@+id/listview_language"/>
+
+    <ListView
+        android:id="@+id/listview_language"
+        android:layout_width="400dp"
+        android:layout_height="wrap_content"
+        android:layout_centerInParent="true"
+        android:dividerHeight="1dp"
+        android:divider="@color/grep_background">
+
+    </ListView>
+
+    <TextView
+        android:layout_width="400dp"
+        android:layout_height="1dp"
+        android:background="@color/grep_background"
+        android:layout_below="@+id/listview_language"
+        android:layout_centerHorizontal="true"/>
+
+</RelativeLayout>

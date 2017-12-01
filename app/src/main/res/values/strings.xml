@@ -1,0 +1,7 @@
+<resources>
+    <string name="app_name">SmartCastToPhone</string>
+    <string name="start_Reg">开始接收</string>
+    <string name="wifi_name">Wifi Name : </string>
+    <string name="wifi_password">Wifi Password : </string>
+    <string name="wifi_connect">开始连接</string>
+</resources>

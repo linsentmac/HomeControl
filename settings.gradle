@@ -1,0 +1,1 @@
+include ':app', ':devicecontrol', ':devicecontrol2', ':languageservice', ':smartcontrol'
