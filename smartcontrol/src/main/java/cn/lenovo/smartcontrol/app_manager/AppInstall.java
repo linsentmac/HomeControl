@@ -37,6 +37,7 @@ public class AppInstall {
     private OkHttpClient okHttpClient;
     private Context mContext;
     private Handler mHandler;
+    private String mPackageName;
 
     public static final int STATUS_OK = 0;
     public static final int STATUS_FAIL = -1;
@@ -50,6 +51,7 @@ public class AppInstall {
     }
 
     public void downLoadApk(final String packageName, String apkUrl){
+        mPackageName = packageName;
         Request request = new Request.Builder()
                 .url(apkUrl)
                 .header("Cookie", "channelid=18540")
@@ -94,7 +96,7 @@ public class AppInstall {
             }
             fos.flush();
             // write end and install apk
-            sendInstallRequestResult(DeviceService.MSG_STARE_DOWNLOAD_APP, STATUS_OK);
+            sendInstallRequestResult(packageName, DeviceService.MSG_STARE_DOWNLOAD_APP, STATUS_OK);
             installApk(file);
         } catch (IOException e){
             e.printStackTrace();
@@ -162,10 +164,11 @@ public class AppInstall {
      * @param camCmd
      * @param ret
      */
-    private void sendInstallRequestResult(int camCmd, int ret) {
+    private void sendInstallRequestResult(String packageName, int camCmd, int ret) {
         Bundle result = new Bundle();
-        result.putInt(DeviceService.INSTALL_APP_CMD_RESULT, ret);
-        sendResponseToLCService(camCmd, result);
+        result.putInt(DeviceService.DOWNLOAD_APP_CMD_RESULT, ret);
+        result.putString(DeviceService.APP_NAME, packageName);
+        sendResponseToSCService(camCmd, result);
     }
 
     /**
@@ -174,7 +177,7 @@ public class AppInstall {
      * @param cmdId
      * @param result
      */
-    private void sendResponseToLCService(int cmdId, Bundle result) {
+    private void sendResponseToSCService(int cmdId, Bundle result) {
         Message response = null;
         Intent intent = new Intent(mContext, DeviceService.class);
         intent.putExtra(DeviceService.EXTRA_CMD_ID, DeviceService.MSG_RESPONSE);

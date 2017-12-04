@@ -35,6 +35,7 @@ public class DeviceService extends Service {
     public static final String EXTRA_RST_OBJ = "rstObj";
 
     // extra for Bundle
+    public static final String DOWNLOAD_APP_CMD_RESULT = "downloadAppCmdRst";
     public static final String INSTALL_APP_CMD_RESULT = "installAppCmdRst";
 
 
@@ -87,11 +88,15 @@ public class DeviceService extends Service {
                 mAppInstall.downLoadApk(packageName, apkUrl);
                 break;
             case MSG_RESPONSE:
-
+                handleResponseMessage(intent);
                 break;
             default:
                 break;
         }
+    }
+
+    private void handleResponseMessage(Intent intent){
+
     }
 
     @Override
