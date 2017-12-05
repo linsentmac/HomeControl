@@ -1,18 +1,50 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="cn.lenovo.smartcontrol">
+    package="cn.lenovo.smartcontrol"
+    android:sharedUserId="android.uid.system">
 
-    <application android:allowBackup="true" android:icon="@mipmap/ic_launcher"
-        android:label="@string/app_name" android:roundIcon="@mipmap/ic_launcher_round"
-        android:supportsRtl="true" android:theme="@style/AppTheme">
-        <activity android:name=".MainActivity">
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.INSTALL_PACKAGES" />
+    <uses-permission android:name="android.permission.GET_PACKAGE_SIZE"/>
+    <uses-permission android:name="android.permission.DELETE_PACKAGES" />
+
+    <!-- LenovoID权限的配置  android:sharedUserId="android.uid.system" -->
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+    <uses-permission android:name="android.permission.GET_TASKS" />
+    <uses-permission android:name="android.permission.USE_CREDENTIALS" />
+    <uses-permission android:name="android.permission.MANAGE_ACCOUNTS" />
+    <uses-permission android:name="android.permission.AUTHENTICATE_ACCOUNTS" />
+    <uses-permission android:name="android.permission.WRITE_SETTINGS" />
+    <uses-permission android:name="android.permission.GET_ACCOUNTS" />
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.READ_SYNC_SETTINGS" />
+    <uses-permission android:name="android.permission.WRITE_SYNC_SETTINGS" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+
+    <!-- 是否海外版 -->
+    <meta-data
+        android:name="lenovoid:oversea"
+        android:value="false" />
+
+    <application
+        android:allowBackup="true"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:supportsRtl="true"
+        android:theme="@style/AppTheme">
+        <activity android:name=".activity.LanguageActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-
 
         <provider
             android:name="android.support.v4.content.FileProvider"
@@ -33,7 +65,67 @@
                 <data android:scheme="package" />
             </intent-filter>
         </receiver>
+        <receiver android:name=".wifi_manager.WifiControl$WifiStateReceiver">
+            <intent-filter>
+                <action android:name="android.net.conn.CONNECTIVITY_CHANGE" />
+            </intent-filter>
+        </receiver>
 
+        <activity android:name=".activity.LockDeviceActivity"></activity>
+        <activity android:name=".activity.MainActivity"/>
+
+
+        <!-- start for sdk only -->
+
+        <activity
+            android:name="com.lenovo.lsf.lenovoid.ui.PsLoginActivity"
+            android:configChanges="orientation|keyboardHidden"
+            android:excludeFromRecents="true"
+            android:exported="false"
+            android:launchMode="singleTask"
+            android:theme="@style/com_lenovo_lsf_ui.no_title"
+            android:windowSoftInputMode="stateAlwaysHidden|adjustPan">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+
+                <data android:scheme="cn.lenovo.smartcontrol.openapp.lenovoid" /> <!-- 注：这里一定要填入应用自己的包名，否则可能会和别的应用命名冲突导致QQ与Sina微博等合作帐号登录失败，并且包名只能是小写字母+” . ”组成，例如：com.lenovo.lsf.sdk.test.openapp.lenovoid -->
+            </intent-filter>
+        </activity>
+
+        <!-- end for sdk only -->
+        <!-- 以下全是LenovoID SDK需要的 -->
+        <meta-data
+            android:name="lenovo:applicationToken"
+            android:value="BGWJ03ZCYLCQ" />
+
+        <!-- 以上全是LenovoID sdk需要的 -->
+
+        <service
+            android:name=".LenovoId.AuthenticatorService"
+            android:enabled="true"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.accounts.AccountAuthenticator" />
+            </intent-filter>
+
+            <meta-data
+                android:name="android.accounts.AccountAuthenticator"
+                android:resource="@xml/authenticator" />
+        </service>
+        <!-- 需要改为自己包名的provider -->
+        <provider
+            android:name="com.lenovo.lsf.lenovoid.data.ImageFileProvider"
+            android:authorities="cn.lenovo.smartcontrol.lenovoid.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/motoid_lsf_file_paths" />
+        </provider>
+        <!-- end for sdk only -->
     </application>
 
 </manifest>

@@ -1,7 +1,9 @@
-package cn.lenovo.smartcontrol;
+package cn.lenovo.smartcontrol.activity;
 
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+
+import cn.lenovo.smartcontrol.R;
 
 public class MainActivity extends AppCompatActivity {
 

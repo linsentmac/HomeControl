@@ -1,3 +1,30 @@
 <resources>
     <string name="app_name">SmartControl</string>
+    <string name="app_lenovo_name">联想账号</string>
+
+
+    <!--Language Select-->
+    <string name="select_language">语言选择</string>
+    <string name="ensure_language">确定</string>
+
+    <!--QRCode-->
+    <string name="scan_QRCode_hint">手机扫描二维码安装手机端APP</string>
+    <string name="enter_Bind_Btn">进入绑定模式</string>
+    <string name="pass">跳过</string>
+
+    <!--Wifi-->
+    <string name="connect_success_str">连接成功</string>
+    <string name="disconnecting_str">连接失败</string>
+    <string name="start_Conn">连接网络</string>
+    <string name="connect_hint">请将手机靠近设备,调大音量,发送Wifi信息...</string>
+    <string name="sin_msg">已收到Wifi信息,正在连接网络,请稍后...</string>
+    <string name="next">下一步</string>
+
+    <!--Wifi　Connect-->
+    <string name="wlan_connect">无线局域网</string>
+    <string name="search_wlan">正在搜索wlan网络...</string>
+    <string name="password">密码</string>
+    <string name="cancel">取消</string>
+    <string name="ensure">确定</string>
+    <string name="wifi_connected">已连接</string>
 </resources>

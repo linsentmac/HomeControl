@@ -4,7 +4,6 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
-import android.os.Message;
 
 import cn.lenovo.smartcontrol.service.DeviceService;
 
@@ -22,7 +21,7 @@ public class InstallReceiver extends BroadcastReceiver {
         String action = intent.getAction();
         String packageName = intent.getDataString().split(":")[1];
         if(action.equals(Intent.ACTION_PACKAGE_ADDED)){
-            sendInstallRequestResult(packageName, DeviceService.MSG_STORE_INSTALL_APP, AppInstall.STATUS_OK);
+            sendInstallRequestResult(packageName, DeviceService.MSG_STORE_INSTALL_APP, AppManager.STATUS_OK);
         }
     }
 
