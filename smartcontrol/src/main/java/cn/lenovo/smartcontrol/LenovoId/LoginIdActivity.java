@@ -159,4 +159,10 @@ public class LoginIdActivity extends AppCompatActivity {
         super.onDestroy();
         if (receiver != null) unregisterReceiver(receiver);
     }
+
+    @Override
+    public void onBackPressed() {
+        super.onBackPressed();
+        finish();
+    }
 }

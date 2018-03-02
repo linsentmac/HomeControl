@@ -80,6 +80,8 @@ public class DeviceService extends Service {
     public static final int REPORT_APP_DOWNLOAD_MSG = 101;
     public static final int REPORT_APP_INSTALL_MSG = 102;
     public static final int REPORT_APP_DOWNLOAD_PERCENT = 103;
+    public static final int REPORT_GET_APP_LIST = 104;
+    public static final int REPORT_APP_SIZE_INFO = 105;
 
     // message for callback
     public static final int MSG_RESPONSE = 1000;
@@ -111,7 +113,8 @@ public class DeviceService extends Service {
         mSharePrefrence = SCSharePrefrence.getInstance(mContext);
         mLockDevice = LockDevice.getInstance(mContext);
         // init MqttManager
-        mMqttManager = MqttManager.getInstance(mContext, mWorkHandler);
+        mMqttManager = MqttManager.getInstance();
+        mMqttManager.setParams(mContext, mWorkHandler);
 
         // register SystemReceiver
         systemReceiver = new AndroidSystemReceiver();
@@ -133,15 +136,16 @@ public class DeviceService extends Service {
         public void handleMessage(Message msg) {
             int cmdId = msg.what;
             Intent intent = (Intent) msg.obj;
-            if(intent != null){
-                handleSCServiceCommands(cmdId, intent);
-            }
+            handleSCServiceCommands(cmdId, intent);
             super.handleMessage(msg);
         }
     }
 
     private void handleSCServiceCommands(int cmdId, Intent intent){
-        Bundle cmdParams = intent.getBundleExtra(EXTRA_CMD_OBJ);
+        Bundle cmdParams = null;
+        if(intent != null){
+            cmdParams = intent.getBundleExtra(EXTRA_CMD_OBJ);
+        }
         String pkgName = null;
         if(cmdParams != null){
             pkgName = cmdParams.getString(APP_NAME);
@@ -175,7 +179,7 @@ public class DeviceService extends Service {
                 mAppManager.getInstalledApps();
                 break;
             case MSG_GET_APP_DETAIL_INFO:
-                mAppManager.getpkginfo(pkgName);
+                mAppManager.getCacheSizeByAndroidO(pkgName);
                 break;
             case MSG_CLEAR_DATA_INFO:
                 mAppManager.clearDataInfo(pkgName);

@@ -48,4 +48,10 @@ public class QRCodeActivity extends Activity implements View.OnClickListener{
                 break;
         }
     }
+
+    @Override
+    public void onBackPressed() {
+        super.onBackPressed();
+        finish();
+    }
 }

@@ -35,7 +35,13 @@ import cn.lenovo.smartcontrol.service.DeviceStatus;
 
 import static cn.lenovo.smartcontrol.service.DeviceService.APP_ADDRESS;
 import static cn.lenovo.smartcontrol.service.DeviceService.APP_NAME;
+import static cn.lenovo.smartcontrol.service.DeviceService.MSG_CLEAR_CACHE_INFO;
+import static cn.lenovo.smartcontrol.service.DeviceService.MSG_CLEAR_DATA_INFO;
+import static cn.lenovo.smartcontrol.service.DeviceService.MSG_GET_APP_DETAIL_INFO;
+import static cn.lenovo.smartcontrol.service.DeviceService.MSG_GET_APP_LIST;
+import static cn.lenovo.smartcontrol.service.DeviceService.MSG_KILL_APP_PROCESS;
 import static cn.lenovo.smartcontrol.service.DeviceService.MSG_STORE_INSTALL_APP;
+import static cn.lenovo.smartcontrol.service.DeviceService.MSG_UNINSTALL_APP;
 
 /**
  * Created by linsen on 18-1-5.
@@ -58,18 +64,21 @@ public class MqttManager {
     private Context mContext;
     private Handler mDeviceHandler;
 
-    private MqttManager(Context context, Handler handler){
+    private MqttManager(){
+        clientId = DeviceStatus.sys_Status.getDeviceID();
+    }
+
+    public void setParams(Context context, Handler handler){
         mContext = context;
         mDeviceHandler = handler;
-        clientId = DeviceStatus.sys_Status.getDeviceID();
         subscriptionTopic = LenovoIDApi.getUserName(mContext) + "@Smartcast";
         publishTopic = "Smartcast@" + LenovoIDApi.getUserName(mContext);
         initConnect();
     }
 
-    public static MqttManager getInstance(Context context, Handler handler){
+    public static MqttManager getInstance(){
         if(mInstance == null){
-            mInstance = new MqttManager(context, handler);
+            mInstance = new MqttManager();
         }
         return mInstance;
     }
@@ -129,7 +138,7 @@ public class MqttManager {
                     mqttAndroidClient.setBufferOpts(disconnectedBufferOptions);
                     subscribeToTopic();
                     reportLenovoID();
-                    //reportDeviceStatus();
+                    reportDeviceStatus();
                 }
 
                 @Override
@@ -166,6 +175,7 @@ public class MqttManager {
                     // message Arrived!
                     System.out.println("Message: " + topic + " : " + new String(message.getPayload()));
                     String msg = new String(message.getPayload());
+                    Log.d(TAG, "messgae receive = " + msg);
                     JSONObject jsonObject = new JSONObject(msg);
                     sendSubscribeMsg(jsonObject);
                 }
@@ -184,6 +194,37 @@ public class MqttManager {
                 case MSG_STORE_INSTALL_APP:
                     sendCmdToSCService(jsonObject.getString(APP_NAME), jsonObject.getString(APP_ADDRESS));
                     break;
+                case MSG_GET_APP_LIST:
+                    Log.d(TAG, "sendSubscribeMsg MSG_GET_APP_LIST ... ");
+                    mDeviceHandler.sendEmptyMessage(MSG_GET_APP_LIST);
+                    break;
+                case MSG_GET_APP_DETAIL_INFO:
+                    Bundle result = new Bundle();
+                    result.putString(APP_NAME, jsonObject.getString(APP_NAME));
+                    sendHandlerMessage(DeviceService.MSG_GET_APP_DETAIL_INFO, result);
+                    break;
+                case MSG_CLEAR_DATA_INFO:
+                    Bundle clearData = new Bundle();
+                    clearData.putString(APP_NAME, jsonObject.getString(APP_NAME));
+                    sendHandlerMessage(DeviceService.MSG_CLEAR_DATA_INFO, clearData);
+                    break;
+                case MSG_CLEAR_CACHE_INFO:
+                    Bundle clearCache = new Bundle();
+                    clearCache.putString(APP_NAME, jsonObject.getString(APP_NAME));
+                    sendHandlerMessage(DeviceService.MSG_CLEAR_CACHE_INFO, clearCache);
+                    break;
+                case MSG_KILL_APP_PROCESS:
+                    Bundle killApp = new Bundle();
+                    killApp.putString(APP_NAME, jsonObject.getString(APP_NAME));
+                    sendHandlerMessage(MSG_KILL_APP_PROCESS, killApp);
+                    break;
+                case MSG_UNINSTALL_APP:
+                    Bundle unInstall = new Bundle();
+                    unInstall.putString(APP_NAME, jsonObject.getString(APP_NAME));
+                    sendHandlerMessage(MSG_UNINSTALL_APP, unInstall);
+                    break;
+
+
             }
 
         } catch (JSONException e) {
@@ -202,10 +243,14 @@ public class MqttManager {
         Bundle result = new Bundle();
         result.putString(DeviceService.APP_ADDRESS, apkUrl);
         result.putString(APP_NAME, packageName);
+        sendHandlerMessage(DeviceService.MSG_STORE_INSTALL_APP, result);
+    }
+
+    private void sendHandlerMessage(int MSG, Bundle result){
         Message message = null;
         Intent intent = new Intent(mContext, DeviceService.class);
         intent.putExtra(DeviceService.EXTRA_CMD_OBJ, result);
-        message = mDeviceHandler.obtainMessage(DeviceService.MSG_STORE_INSTALL_APP, 0, 0, intent);
+        message = mDeviceHandler.obtainMessage(MSG, 0, 0, intent);
         mDeviceHandler.sendMessage(message);
     }
 
