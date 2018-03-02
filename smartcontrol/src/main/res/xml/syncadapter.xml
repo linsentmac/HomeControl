@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <sync-adapter xmlns:android="http://schemas.android.com/apk/res/android"
-    android:contentAuthority="com.lenovo.smartcast.provider"
-    android:accountType="com.lenovo.smartcast.type"
+    android:contentAuthority="cn.lenovo.smartcontrol.provider"
+    android:accountType="cn.lenovo.smartcontrol.type"
     android:userVisible="false"
     android:supportsUploading="false"
     android:allowParallelSyncs="false"

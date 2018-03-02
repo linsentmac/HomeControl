@@ -6,7 +6,7 @@ android {
 
     defaultConfig {
         applicationId "cn.lenovo.smartcontrol"
-        minSdkVersion 15
+        minSdkVersion 19
         targetSdkVersion 26
         versionCode 1
         versionName "1.0"
@@ -25,6 +25,16 @@ android {
             dirs 'libs'
         }
     }
+    dexOptions {
+        preDexLibraries = false
+    }
+    lintOptions {
+        abortOnError false
+    }
+}
+
+repositories {
+    maven { url "https://repo.eclipse.org/content/repositories/paho-snapshots/" }
 }
 
 dependencies {
@@ -38,4 +48,15 @@ dependencies {
     compile 'com.android.support:appcompat-v7:26.+'
     compile 'com.android.support.constraint:constraint-layout:1.0.2'
     testCompile 'junit:junit:4.12'
+    compile(project(':org.eclipse.paho.android.service')) {
+        //exclude module: "org.eclipse.paho.client.mqttv3"
+        transitive = true
+    }
+    compile 'org.eclipse.paho:org.eclipse.paho.client.mqttv3:1.1.0'
+
+}
+
+configurations.compile.exclude module: 'org.eclipse.paho.client.mqttv3'
+task debug << {
+    configurations.compile.each { println it }
 }

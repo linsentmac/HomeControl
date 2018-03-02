@@ -17,11 +17,34 @@ public class WifiControl {
     private static final boolean DBG = true;
     private static final String TAG = "SC-WifiControl";
 
-    public WifiControl(Context context){
+    private static Context mContext;
+    private static int preLevel;
 
+    public WifiControl(Context context){
+        mContext = context;
     }
 
-    public class WifiStateReceiver extends BroadcastReceiver{
+    public static void getWifiInfo() {
+        WifiManager wifiControl = (WifiManager) mContext.getSystemService(Context.WIFI_SERVICE);
+        WifiInfo wifiInfo = wifiControl.getConnectionInfo();
+        if (wifiInfo.getBSSID() != null) {
+            // wifi name
+            String ssid = wifiInfo.getSSID();
+            //wifi level
+            int signalLevel = WifiManager.calculateSignalLevel(wifiInfo.getRssi(), 5);
+            //wifi speed
+            int speed = wifiInfo.getLinkSpeed();
+            if(DBG) Log.d(TAG, "ssid="+ssid+",signalLevel="+signalLevel+",speed="+speed+"Mbps");
+            WifiStatus.getInstance().setWifiInfo(ssid, signalLevel);
+            if((signalLevel - preLevel) > 10){
+                preLevel = signalLevel;
+                // report cloud
+                WifiStatus.getInstance().setWifiInfo(ssid, signalLevel);
+            }
+        }
+    }
+
+    public static class WifiStateReceiver extends BroadcastReceiver{
 
         private Context mContext;
         private int preLevel;
@@ -35,7 +58,7 @@ public class WifiControl {
             }
         }
 
-        private void getWifiInfo() {
+        /*private void getWifiInfo() {
             WifiManager wifiControl = (WifiManager) mContext.getSystemService(Context.WIFI_SERVICE);
             WifiInfo wifiInfo = wifiControl.getConnectionInfo();
             if (wifiInfo.getBSSID() != null) {
@@ -52,7 +75,7 @@ public class WifiControl {
                     WifiStatus.getInstance().setWifiInfo(ssid, signalLevel);
                 }
             }
-        }
+        }*/
     }
 
 }

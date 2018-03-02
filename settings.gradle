@@ -1,1 +1,1 @@
-include ':app', ':devicecontrol', ':devicecontrol2', ':languageservice', ':smartcontrol'
+include ':app', ':devicecontrol', ':devicecontrol2', ':languageservice', ':smartcontrol','org.eclipse.paho.android.service'

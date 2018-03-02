@@ -27,6 +27,7 @@ import android.widget.Toast;
 import java.util.ArrayList;
 import java.util.List;
 
+import cn.lenovo.smartcontrol.LenovoId.LoginIdActivity;
 import cn.lenovo.smartcontrol.R;
 import cn.lenovo.smartcontrol.utils.StatusBarUtil;
 import cn.lenovo.smartcontrol.wifi_manager.WifiConnectManager;

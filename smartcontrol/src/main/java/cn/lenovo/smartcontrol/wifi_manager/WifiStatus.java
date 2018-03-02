@@ -2,6 +2,8 @@ package cn.lenovo.smartcontrol.wifi_manager;
 
 import android.os.Parcel;
 import android.os.Parcelable;
+import android.text.style.TextAppearanceSpan;
+import android.util.Log;
 
 /**
  * Created by linsen on 17-12-4.
@@ -57,6 +59,10 @@ public class WifiStatus implements Parcelable {
     }
 
     public String getWifiName(){
+        Log.d("SC-DeviceStatus", "getWifiName = " + wifiName);
+        if(wifiName == null){
+            WifiControl.getWifiInfo();
+        }
         return wifiName;
     }
 

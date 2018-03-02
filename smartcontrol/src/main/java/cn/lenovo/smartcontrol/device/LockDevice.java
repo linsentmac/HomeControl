@@ -1,4 +1,4 @@
-package cn.lenovo.smartcontrol.utils;
+package cn.lenovo.smartcontrol.device;
 
 import android.content.Context;
 import android.content.Intent;

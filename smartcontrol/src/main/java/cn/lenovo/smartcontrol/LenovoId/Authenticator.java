@@ -9,8 +9,6 @@ import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
 
-import cn.lenovo.smartcontrol.activity.LoginIdActivity;
-
 
 /**
  * Created by linsen on 17-11-10.

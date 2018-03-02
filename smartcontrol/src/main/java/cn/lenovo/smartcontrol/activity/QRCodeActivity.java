@@ -6,6 +6,7 @@ import android.os.Bundle;
 import android.view.View;
 import android.widget.Button;
 
+import cn.lenovo.smartcontrol.LenovoId.LoginIdActivity;
 import cn.lenovo.smartcontrol.R;
 import cn.lenovo.smartcontrol.utils.StatusBarUtil;
 
@@ -40,7 +41,7 @@ public class QRCodeActivity extends Activity implements View.OnClickListener{
     public void onClick(View v) {
         switch (v.getId()){
             case R.id.pass_Bind_Btn:
-                startActivity(new Intent(this, WifiConnectActivity.class));
+                startActivity(new Intent(this, LoginIdActivity.class));
                 break;
             case R.id.enter_Bind_Btn:
                 //startActivity(new Intent(this, MainActivity.class));

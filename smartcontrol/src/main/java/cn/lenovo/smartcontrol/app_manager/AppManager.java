@@ -1,9 +1,15 @@
 package cn.lenovo.smartcontrol.app_manager;
 
 import android.app.ActivityManager;
+import android.app.usage.UsageStats;
+import android.app.usage.UsageStatsManager;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.ApplicationInfo;
+import android.content.pm.IPackageDataObserver;
+import android.content.pm.IPackageDeleteObserver;
+import android.content.pm.IPackageInstallObserver;
+import android.content.pm.IPackageStatsObserver;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.content.pm.PackageStats;
@@ -13,9 +19,9 @@ import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
 import android.os.Message;
+import android.os.RemoteException;
 import android.support.v4.content.FileProvider;
 import android.util.Log;
-import android.widget.ListView;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -30,14 +36,16 @@ import java.util.Map;
 import java.util.Timer;
 import java.util.TimerTask;
 
+import cn.lenovo.smartcontrol.mqtt.MqttManager;
 import cn.lenovo.smartcontrol.service.DeviceService;
 import cn.lenovo.smartcontrol.utils.FileUtils;
 import okhttp3.Call;
 import okhttp3.Callback;
-import okhttp3.HttpUrl;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.Response;
+
+import static cn.lenovo.smartcontrol.service.DeviceService.MSG_STORE_DOWNLOAD_PERCENT;
 
 /**
  * Created by linsen3 on 2017/12/2.
@@ -52,14 +60,16 @@ public class AppManager {
     private Handler mHandler;
     private String mCurrentPkgName;
     private Timer mAppTimer;
+    private CurrentAppTimerTask mAppTimerTask;
     private ActivityManager manager;
+    private PackageManager pm;
     private long startAppTime = 0;
     private AppStatus mAppStatus;
 
     public static final int STATUS_OK = 0;
     public static final int STATUS_FAIL = -1;
 
-    private static final String ATTR_PACKAGE_STATS="PackageStats";
+    private static final String ATTR_PACKAGE_STATS = "PackageStats";
 
 
     public AppManager(Context context, Handler handler){
@@ -67,6 +77,8 @@ public class AppManager {
         okHttpClient = new OkHttpClient();
         mHandler = handler;
         mAppStatus = AppStatus.getInstance();
+        pm = mContext.getPackageManager();
+        mAppTimer = new Timer();
         getInstalledApps();
         getCurrentApplicationInfo();
     }
@@ -106,8 +118,8 @@ public class AppManager {
      */
     private void getCurrentApplicationInfo(){
         manager = (ActivityManager) mContext.getSystemService(Context.ACTIVITY_SERVICE);
-        mAppTimer = new Timer();
-        mAppTimer.schedule(new CurrentAppTimerTask(), 0, 1000);
+        mAppTimerTask = new CurrentAppTimerTask();
+        mAppTimer.schedule(mAppTimerTask, 0, 1000);
     }
 
     class CurrentAppTimerTask extends TimerTask{
@@ -116,7 +128,8 @@ public class AppManager {
         public void run() {
             List<ActivityManager.RunningTaskInfo> runningTask = manager.getRunningTasks(1);
             ActivityManager.RunningTaskInfo runningTaskInfo = runningTask.get(0);
-            String packageName = runningTaskInfo.topActivity.getPackageName();
+            String packageName = runningTaskInfo.baseActivity.getPackageName();
+            Log.d(TAG, "packageName = " + packageName);
             if(mCurrentPkgName == null){
                 mCurrentPkgName = packageName;
                 startAppTime = System.currentTimeMillis();
@@ -124,18 +137,40 @@ public class AppManager {
                 // report cloud
                 long foregroundTime = System.currentTimeMillis() - startAppTime;
                 String appName = getProgramNameByPackageName(mCurrentPkgName);
-                mAppStatus.setAppForeInfo(appName, foregroundTime);
+                //Log.d(TAG, "report current app name = " + appName + "../ ..pkgName" + mCurrentPkgName);
+                mAppStatus.setAppForeInfo(appName, mCurrentPkgName, foregroundTime);
             }else {
                 startAppTime = System.currentTimeMillis();
                 mCurrentPkgName = packageName;
             }
+
+            /*UsageStatsManager m = (UsageStatsManager) mContext.getSystemService(Context.USAGE_STATS_SERVICE);
+            if (m != null) {
+                long now = System.currentTimeMillis();
+                //获取60秒之内的应用数据
+                List<UsageStats> stats = m.queryUsageStats(UsageStatsManager.INTERVAL_BEST, now - 60 * 1000, now);
+                Log.i(TAG, "Running app number in last 60 seconds : " + stats.size());
+
+                String topActivity = "";
+
+                //取得最近运行的一个app，即当前运行的app
+                if ((stats != null) && (!stats.isEmpty())) {
+                    int j = 0;
+                    for (int i = 0; i < stats.size(); i++) {
+                        if (stats.get(i).getLastTimeUsed() > stats.get(j).getLastTimeUsed()) {
+                            j = i;
+                        }
+                    }
+                    topActivity = stats.get(j).getPackageName();
+                }
+                Log.i(TAG, "top running app is : "+topActivity);
+            }*/
 
         }
 
     }
 
     private String getProgramNameByPackageName(String packageName) {
-        PackageManager pm = mContext.getPackageManager();
         String name = null;
         try {
             name = pm.getApplicationLabel(
@@ -147,86 +182,129 @@ public class AppManager {
         return name;
     }
 
-    // AppStorageSettings.java
+    /**
+     * get App/Data/Cache Size
+     * @param pkg
+     */
     public void getpkginfo(String pkg){
-        /*PackageManager pm = mContext.getPackageManager();
+        //pm.getPackageSizeInfo(pkg, new PkgSizeObserver(pkg));
         try {
-            Method getPackageSizeInfo = pm.getClass().getMethod("getPackageSizeInfo", String.class, IPackageStatsObserver.class);
-            getPackageSizeInfo.invoke(pm, pkg, new PkgSizeObserver());
-        } catch (Exception e) {
-            e.printStackTrace();
-        }*/
+            //通过反射机制获得该隐藏函数
+            Method getPackageSizeInfo = pm.getClass().getDeclaredMethod("getPackageSizeInfo", String.class,IPackageStatsObserver.class);
+            //调用该函数，并且给其分配参数 ，待调用流程完成后会回调PkgSizeObserver类的函数
+            getPackageSizeInfo.invoke(pm, pkg, new PkgSizeObserver(pkg));
+        } catch(Exception ex){
+            Log.e(TAG, "NoSuchMethodException") ;
+            ex.printStackTrace() ;
+        }
     }
 
 
-    /*class PkgSizeObserver extends IPackageStatsObserver.Stub {
+    class PkgSizeObserver extends IPackageStatsObserver.Stub {
         private String pkg;
-        private PackageManager pm;
-        public PkgSizeObserver(String pkg, PackageManager pm){
+        public PkgSizeObserver(String pkg){
             this.pkg = pkg;
-            this.pm = pm;
         }
 
         public void onGetStatsCompleted(PackageStats pStats, boolean succeeded) {
             String appSize = FileUtils.formatFileSize(pStats.codeSize);
             String dataSize = FileUtils.formatFileSize(pStats.dataSize);
             String cacheSize = FileUtils.formatFileSize(pStats.cacheSize);
-            boolean isAppStarted = checkForceStop(pm, pkg);
+            boolean isAppStarted = checkForceStop(pkg);
+            Log.d(TAG, "appSize = " + appSize + "\n"
+                    + "dataSize = " + dataSize + "\n"
+                    + "cacheSize = " + cacheSize + "\n"
+                    + "isAppStarted = " + isAppStarted);
             mAppStatus.setAppDetailInfo(appSize, dataSize, cacheSize, isAppStarted);
         }
-    }*/
-
-    public void clearCacheInfo(String packageName){
-
-        //mPm.deleteApplicationCacheFiles(mPackageName, mClearCacheObserver);
     }
 
+
+    /**
+     * clear data File
+     */
+    private ClearUserDataObserver mClearDataObserver;
     public void clearDataInfo(String packageName){
         // init
-        /*if (mClearDataObserver == null) {
+        if (mClearDataObserver == null) {
             mClearDataObserver = new ClearUserDataObserver();
         }
         ActivityManager am = (ActivityManager)
-                getActivity().getSystemService(Context.ACTIVITY_SERVICE);
-        boolean res = am.clearApplicationUserData(packageName, mClearDataObserver);*/
+                mContext.getSystemService(Context.ACTIVITY_SERVICE);
+        //boolean res = am.clearApplicationUserData(packageName, mClearDataObserver);
 
-        // click clear data
-        /*if (mAppEntry.info.manageSpaceActivityName != null) {
-            if (!Utils.isMonkeyRunning()) {
-                Intent intent = new Intent(Intent.ACTION_DEFAULT);
-                intent.setClassName(mAppEntry.info.packageName,
-                        mAppEntry.info.manageSpaceActivityName);
-                startActivityForResult(intent, REQUEST_MANAGE_SPACE);
-            }
-        } else {
-            showDialogInner(DLG_CLEAR_DATA, 0);
-        }*/
-    }
-
-    /*class ClearCacheObserver extends IPackageDataObserver.Stub {
-        public void onRemoveCompleted(final String packageName, final boolean succeeded) {
-            final Message msg = mHandler.obtainMessage(MSG_CLEAR_CACHE);
-            msg.arg1 = succeeded ? OP_SUCCESSFUL : OP_FAILED;
-            mHandler.sendMessage(msg);
+        try {
+            //通过反射机制获得该隐藏函数
+            Method clearApplicationUserData = am.getClass().getDeclaredMethod("clearApplicationUserData", String.class, IPackageDataObserver.class);
+            //调用该函数，并且给其分配参数 ，待调用流程完成后会回调PkgSizeObserver类的函数
+            clearApplicationUserData.invoke(am, packageName, mClearDataObserver);
+        } catch(Exception ex){
+            Log.e(TAG, "NoSuchMethodException") ;
+            ex.printStackTrace() ;
         }
     }
 
     class ClearUserDataObserver extends IPackageDataObserver.Stub {
         public void onRemoveCompleted(final String packageName, final boolean succeeded) {
-            final Message msg = mHandler.obtainMessage(MSG_CLEAR_USER_DATA);
-            msg.arg1 = succeeded ? OP_SUCCESSFUL : OP_FAILED;
-            mHandler.sendMessage(msg);
+            Log.d(TAG, packageName + " clear data success " + succeeded);
         }
-    }*/
+    }
 
-    // ProcessStatsDetail.java
+    /**
+     * clear Cache File
+     */
+    private ClearCacheObserver mClearCacheObserver;
+    public void clearCacheInfo(String packageName){
+        if (mClearCacheObserver == null) {
+            mClearCacheObserver = new ClearCacheObserver();
+        }
+        //pm.deleteApplicationCacheFiles(packageName, mClearCacheObserver);
+
+        try {
+            //通过反射机制获得该隐藏函数
+            Method deleteAppCache = pm.getClass().getDeclaredMethod("deleteApplicationCacheFiles", String.class, IPackageDataObserver.class);
+            //调用该函数，并且给其分配参数 ，待调用流程完成后会回调PkgSizeObserver类的函数
+            deleteAppCache.invoke(pm, packageName, mClearCacheObserver);
+        } catch(Exception ex){
+            Log.e(TAG, "NoSuchMethodException") ;
+            ex.printStackTrace() ;
+        }
+    }
+
+    class ClearCacheObserver extends IPackageDataObserver.Stub {
+        public void onRemoveCompleted(final String packageName, final boolean succeeded) {
+            Log.d(TAG, packageName + " clear cache success " + succeeded);
+        }
+    }
+
+    /**
+     * kill app process
+     * @param packageName
+     */
     public void killProcesses(String packageName){
         ActivityManager am = (ActivityManager)mContext.getSystemService(
                 Context.ACTIVITY_SERVICE);
-        //am.forceStopPackage(packageName);
+        if(checkForceStop(packageName)){
+            //am.forceStopPackage(packageName);
+
+            try {
+                //通过反射机制获得该隐藏函数
+                Method forceStopPackage = am.getClass().getDeclaredMethod("forceStopPackage", String.class);
+                //调用该函数，并且给其分配参数 ，待调用流程完成后会回调PkgSizeObserver类的函数
+                forceStopPackage.invoke(am, packageName);
+            } catch(Exception ex){
+                Log.e(TAG, "NoSuchMethodException") ;
+                ex.printStackTrace() ;
+            }
+        }
     }
 
-    private boolean checkForceStop(PackageManager pm, String packageName){
+    /**
+     * check app is running
+     * @param packageName
+     * @return
+     */
+    private boolean checkForceStop(String packageName){
         boolean isStarted = false;
         try {
             ApplicationInfo info = pm.getApplicationInfo(packageName, 0);
@@ -236,14 +314,37 @@ public class AppManager {
         } catch (PackageManager.NameNotFoundException e) {
             e.printStackTrace();
         }
+        Log.d(TAG, "app isRunning " + isStarted);
         return isStarted;
     }
 
+
+    /**
+     * uninstall apk
+     * @param packageName
+     */
     public void deleteApk(String packageName){
-        /*PackageManager pm = mContext.getPackageManager();
         IPackageDeleteObserver observer = new MyPackageDeleteObserver();
-        pm.deletePackage(packageName, observer, 0);*/
+        //pm.deletePackage(packageName, observer, 0);
+
+        try {
+            //通过反射机制获得该隐藏函数
+            Method deletePackage = pm.getClass().getDeclaredMethod("deletePackage", String.class, IPackageDeleteObserver.class, Integer.class);
+            //调用该函数，并且给其分配参数 ，待调用流程完成后会回调PkgSizeObserver类的函数
+            deletePackage.invoke(pm, packageName, observer, 0);
+        } catch(Exception ex){
+            Log.e(TAG, "NoSuchMethodException") ;
+            ex.printStackTrace() ;
+        }
     }
+
+    class MyPackageDeleteObserver extends IPackageDeleteObserver.Stub{
+        public void packageDeleted(final String packageName, final int returnCode) {
+            Log.d(TAG, packageName + " delete success " + returnCode);
+        }
+    }
+
+
 
     /**
      * downloadapk from the field of SmartCast+
@@ -251,6 +352,7 @@ public class AppManager {
      * @param apkUrl
      */
     public void downLoadApk(final String packageName, String apkUrl){
+        Log.d(TAG, "downLoadApk ............");
         Request request = new Request.Builder()
                 .url(apkUrl)
                 .header("Cookie", "channelid=18540")
@@ -260,18 +362,21 @@ public class AppManager {
         call.enqueue(new Callback() {
             @Override
             public void onFailure(Call call, IOException e) {
-
+                Log.d(TAG, "http request failure " + e.getMessage());
             }
 
             @Override
             public void onResponse(Call call, Response response) throws IOException {
+                Log.d(TAG, "http request success ......");
                 writeApkToFile(packageName, response);
             }
         });
     }
 
 
+    private final String DOWNLOAD_PATH = Environment.getExternalStorageDirectory()+"/SmartControl/";
     private void writeApkToFile(String packageName, Response response){
+        Log.d(TAG, "writeApkToFile ......");
         InputStream is = null;
         byte[] buf = new byte[2048];
         int len = 0;
@@ -280,7 +385,7 @@ public class AppManager {
             is = response.body().byteStream();
             int length = (int) response.body().contentLength();
             Log.d(TAG, "length = " + length);
-            File rootFile = new File(Environment.getExternalStorageDirectory()+"/SmartShop/");
+            File rootFile = new File(DOWNLOAD_PATH);
             if(!rootFile.exists()){
                 rootFile.mkdirs();
             }
@@ -289,14 +394,25 @@ public class AppManager {
                 file.createNewFile();
             }
             fos = new FileOutputStream(file);
+            int total = 0;
+            int prePrecent = 0;
             while ((len = is.read(buf)) != -1)
             {
                 fos.write(buf, 0, len);
+                total += len;
+                int percent = total/(length/100);
+                if(percent > (prePrecent + 10)){
+                    sendInstallRequestResult(packageName, MSG_STORE_DOWNLOAD_PERCENT, percent);
+                    prePrecent = percent;
+                }
+
             }
             fos.flush();
+            Log.d(TAG, "download Success , Start install apk");
             // write end and install apk
             sendInstallRequestResult(packageName, DeviceService.MSG_STORE_DOWNLOAD_APP, STATUS_OK);
-            installApk(file);
+            //installApk(file);
+            installSilentWithReflection(mContext, file);
         } catch (IOException e){
             e.printStackTrace();
             Log.d(TAG, "error = " + e.getMessage());
@@ -344,6 +460,33 @@ public class AppManager {
         }).start();
     }
 
+    public void installSilentWithReflection(final Context context, File apkFile) {
+        try {
+            PackageManager packageManager = context.getPackageManager();
+            Method method = packageManager.getClass().getDeclaredMethod("installPackage",
+                    new Class[] {Uri.class, IPackageInstallObserver.class, int.class, String.class} );
+            method.setAccessible(true);
+            Uri apkUri = Uri.fromFile(apkFile);
+            Log.d(TAG, "apkUri = " + apkUri + " /package = " + apkFile.getName());
+            method.invoke(packageManager, new Object[] {apkUri, new IPackageInstallObserver.Stub() {
+                @Override
+                public void packageInstalled(String pkgName, int resultCode) throws RemoteException {
+                    Log.d(TAG, "packageInstalled = " + pkgName + "; resultCode = " + resultCode);
+                    sendInstallRequestResult(pkgName, DeviceService.MSG_STORE_INSTALL_APP, STATUS_OK);
+                    deleteInstallPackage(pkgName);
+                }
+            }, Integer.valueOf(2), apkFile.getName()});
+            Log.d(TAG, "install ending ......");
+            //PackageManager.INSTALL_REPLACE_EXISTING = 2;
+        } catch (NoSuchMethodException e) {
+            e.printStackTrace();
+            Log.d(TAG, "NoSuchMethodException " + e.getMessage());
+        } catch (Exception e) {
+            e.printStackTrace();
+            Log.d(TAG, "install error " + e.getMessage());
+        }
+    }
+
     private Uri getUriForFile(Context context, File file) {
         if (context == null || file == null) {
             throw new NullPointerException();
@@ -357,8 +500,21 @@ public class AppManager {
         return uri;
     }
 
+    public void deleteInstallPackage(String packageName){
+        //String[] sourceStrArray = packageName.split(":");
+        File file = new File(DOWNLOAD_PATH, packageName);
+        try {
+            if(file.exists()){
+                file.delete();
+                Log.d(TAG, "delete success");
+            }
+        }catch (Exception e){
+            e.printStackTrace();
+        }
+    }
+
     /**
-     * send callback result for VideoProvider
+     * send callback result for AppManager
      *
      * @param camCmd
      * @param ret
@@ -384,6 +540,18 @@ public class AppManager {
         intent.putExtra(DeviceService.EXTRA_RST_OBJ, result);
         response = mHandler.obtainMessage(DeviceService.MSG_RESPONSE, 0, 0, intent);
         mHandler.sendMessage(response);
+    }
+
+    public void releaseAppTask(){
+        if(mAppTimerTask != null){
+            mAppTimerTask.cancel();
+            mAppTimerTask = null;
+        }
+        if(mAppTimer != null){
+            mAppTimer.cancel();
+            mAppTimer.purge();
+            mAppTimer = null;
+        }
     }
 
 }

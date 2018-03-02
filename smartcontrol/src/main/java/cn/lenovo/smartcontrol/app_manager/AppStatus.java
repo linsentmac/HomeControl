@@ -15,6 +15,7 @@ import java.util.Objects;
 public class AppStatus implements Parcelable {
 
     private String appName;
+    private String packageName;
     private long appforeTime;
     private List<Map<String, Object>> appList;
     private String appSize;
@@ -37,6 +38,7 @@ public class AppStatus implements Parcelable {
 
     protected AppStatus(Parcel in) {
         appName = in.readString();
+        packageName = in.readString();
         appforeTime = in.readLong();
         appList = in.readArrayList(null);
         appSize = in.readString();
@@ -65,6 +67,7 @@ public class AppStatus implements Parcelable {
     @Override
     public void writeToParcel(Parcel dest, int flags) {
         dest.writeString(appName);
+        dest.writeString(packageName);
         dest.writeLong(appforeTime);
         dest.writeList(appList);
         dest.writeString(appSize);
@@ -73,13 +76,18 @@ public class AppStatus implements Parcelable {
         dest.writeInt(isAppStarted ? 1 : 0);
     }
 
-    public void setAppForeInfo(String appName, long appforeTime){
+    public void setAppForeInfo(String appName, String packageName, long appforeTime){
         this.appName = appName;
+        this.packageName = packageName;
         this.appforeTime = appforeTime;
     }
 
-    public String getAppName(){
+    public String getCurrentAppName(){
         return appName;
+    }
+
+    public String getCurrentPkgName(){
+        return packageName;
     }
 
     public long getAppforeTime(){
